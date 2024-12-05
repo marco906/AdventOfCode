@@ -23,7 +23,7 @@ struct Day04: AdventDay {
   
   var diagonals: [String] {
     guard !matrix.isEmpty && matrix.count == matrix[0].count else {
-        return [] // Ensure the matrix is non-empty and symmetric
+        return []
     }
     
     let size = matrix.count
@@ -56,6 +56,12 @@ struct Day04: AdventDay {
     return diagonals
   }
   
+  func isXmasDiagonal(_ vector: String) -> Bool {
+    let pattern = /MAS|SAM/
+    
+    return vector.wholeMatch(of: pattern) != nil
+  }
+  
   func part1() -> Any {
     let pattern = /XMAS/
     let patternReverse = /SAMX/
@@ -71,6 +77,28 @@ struct Day04: AdventDay {
   }
   
   func part2() -> Any {
-    return 0
+    var res = 0
+    
+    for rowIndex in 1..<matrix.count - 1 {
+      for columnIndex in 1..<matrix[rowIndex].count - 1 {
+        let current = matrix[rowIndex][columnIndex]
+        guard current == "A" else { continue }
+        let topLeft = matrix[rowIndex - 1][columnIndex - 1]
+        let bottomRight = matrix[rowIndex + 1][columnIndex + 1]
+        
+        let diagonal1 = [topLeft, current, bottomRight].joined()
+        guard isXmasDiagonal(diagonal1) else { continue }
+        
+        let topRight = matrix[rowIndex - 1][columnIndex + 1]
+        let bottomLeft = matrix[rowIndex + 1][columnIndex - 1]
+        
+        let diagonal2 = [topRight, current, bottomLeft].joined()
+        guard isXmasDiagonal(diagonal2) else { continue }
+        
+        res += 1
+      }
+    }
+    
+    return res
   }
 }

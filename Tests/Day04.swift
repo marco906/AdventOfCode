@@ -18,6 +18,19 @@ struct Day04Tests {
     ..M.M.M.MM
     .X.X.XMASX
     """
+  
+  let testData2 = """
+    .M.S......
+    ..A..MSMS.
+    .M.S.MAA..
+    ..A.ASMSM.
+    .M.S.M....
+    ..........
+    S.S.S.S.S.
+    .A.A.A.A..
+    M.M.M.M.M.
+    ..........
+    """
 
   @Test
   func testPart1() async throws {
@@ -27,7 +40,7 @@ struct Day04Tests {
 
   @Test
   func testPart2() async throws {
-    let challenge = Day04(data: testData)
-    #expect(String(describing: challenge.part2()) == "0")
+    let challenge = Day04(data: testData2)
+    #expect(String(describing: challenge.part2()) == "9")
   }
 }
