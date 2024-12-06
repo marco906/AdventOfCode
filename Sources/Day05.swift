@@ -20,28 +20,58 @@ struct Day05: AdventDay {
     var res = 0
     let rulesDict = rules.reduce(into: [Int : Set<Int>]()) { $0[$1[1], default: []].insert($1[0]) }
     
-    updateLoop: for pages in updates {
-      var pagesAfter = Set(pages)
+    updateLoop: for update in updates {
+      var pagesAfter = Set(update)
 
-      for page in pages {
+      for page in update {
         pagesAfter.remove(page)
         let pagesRequiredBefore = rulesDict[page] ?? []
 
         if pagesRequiredBefore.isEmpty || pagesAfter.isDisjoint(with: pagesRequiredBefore) {
-          // page is valid
+          continue
         } else {
           continue updateLoop
         }
       }
       
-      let middleIndex = pages.count / 2
-      res += pages[middleIndex]
+      let middleIndex = update.count / 2
+      res += update[middleIndex]
     }
     
     return res
   }
   
   func part2() -> Any {
-    return 0
+    var res = 0
+    let rulesDict = rules.reduce(into: [Int : Set<Int>]()) { $0[$1[1], default: []].insert($1[0]) }
+    
+    for update in updates {
+      let pagesAll = Set(update)
+      var pagesAfter = pagesAll
+      var needsFix = false
+
+      for page in update {
+        pagesAfter.remove(page)
+        let pagesRequiredBefore = rulesDict[page] ?? []
+
+        if pagesRequiredBefore.isEmpty || pagesAfter.isDisjoint(with: pagesRequiredBefore) {
+          continue
+        } else {
+          needsFix = true
+          break
+        }
+      }
+      
+      if needsFix {
+        let fixedUpdate = update.sorted{
+          rulesDict[$1, default: []].intersection(pagesAll).count < rulesDict[$0, default: []].intersection(pagesAll).count
+        }
+        
+        let middleIndex = fixedUpdate.count / 2
+        res += fixedUpdate[middleIndex]
+      }
+    }
+    
+    return res
   }
 }
