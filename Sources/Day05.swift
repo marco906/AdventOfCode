@@ -1,20 +1,14 @@
 import Algorithms
 
 struct Day05: AdventDay {
-  // Save your data in a corresponding text file in the `Data` directory.
-  var data: String
-  
-  var dataComponents: [String] {
-    data.split(separator: "\n\n").map { String($0) }
+  init(data: String) {
+    let dataComponents = data.split(separator: "\n\n").map { String($0) }
+    self.rules = dataComponents[0].split(separator: "\n").map { $0.components(separatedBy: "|").compactMap { Int($0) } }
+    self.updates = dataComponents[1].split(separator: "\n").map { $0.components(separatedBy: ",").compactMap { Int($0) } }
   }
   
-  var rules: [[Int]] {
-    dataComponents[0].split(separator: "\n").map { $0.components(separatedBy: "|").compactMap { Int($0) } }
-  }
-  
-  var updates: [[Int]] {
-    dataComponents[1].split(separator: "\n").map { $0.components(separatedBy: ",").compactMap { Int($0) } }
-  }
+  var rules: [[Int]]
+  var updates: [[Int]]
   
   func part1() -> Any {
     var res = 0

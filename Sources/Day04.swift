@@ -1,12 +1,11 @@
 import Algorithms
 
 struct Day04: AdventDay {
-  // Save your data in a corresponding text file in the `Data` directory.
-  var data: String
-  
-  var matrix: [[String]] {
-    data.split(separator: "\n").map { $0.map { String($0) } }
+  init(data: String) {
+    self.matrix = data.split(separator: "\n").map { $0.map { String($0) } }
   }
+  
+  var matrix: [[String]]
   
   var rows: [String] {
     matrix.map { $0.joined() }
