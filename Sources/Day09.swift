@@ -42,6 +42,56 @@ struct Day09: AdventDay {
   }
   
   func part2() async -> Any {
-    return 0
+    var blocks = getBlocks()
+    var i = 0
+    var j = blocks.count - 1
+
+    while i < j {
+      if blocks[j] == nil {
+        j -= 1
+        continue
+      } else if blocks[i] != nil {
+        i += 1
+        continue
+      } else {
+        var currentBlockIndex = j
+        var numBlocks = 0
+        
+        var startSpaceIndex = i
+        var currentSpaceIndex = i
+        var numSpaces = 0
+        
+        while currentBlockIndex > i {
+          if blocks[currentBlockIndex] == blocks[j] {
+            numBlocks += 1
+            currentBlockIndex -= 1
+          } else {
+            currentBlockIndex += 1
+            break
+          }
+        }
+        
+        while numSpaces < numBlocks && currentSpaceIndex < currentBlockIndex {
+          if blocks[currentSpaceIndex] == nil {
+            numSpaces += 1
+          } else {
+            startSpaceIndex = currentSpaceIndex + 1
+            numSpaces = 0
+          }
+          currentSpaceIndex += 1
+        }
+        
+        if numSpaces == numBlocks {
+          for spaceIndex in startSpaceIndex..<currentSpaceIndex {
+            let blockIndex = j - (spaceIndex - startSpaceIndex)
+            blocks.swapAt(spaceIndex, blockIndex)
+          }
+        }
+        
+        j = currentBlockIndex - 1
+      }
+    }
+
+    return blocks.indices.reduce(0) { $0 + $1 * (blocks[$1] ?? 0) }
   }
 }
