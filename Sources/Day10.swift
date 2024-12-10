@@ -12,6 +12,7 @@ struct Day10: AdventDay {
   var numCols: Int
 
   var directions: [[Int]] = [[0,1], [0, -1], [1, 0], [-1,0]]
+  var trailMemory = [Position:Int]()
 
   struct Position: Hashable {
     var x: Int
@@ -23,45 +24,59 @@ struct Day10: AdventDay {
     guard position.x < numCols && position.y < numRows else { return false }
     return true
   }
+  
+  func isSummit(_ position: Position) -> Bool {
+    return map[position.y][position.x] == 9
+  }
 
-  func hike(pos: Position, score: inout Int, vistited: inout [Position:Int]) {
-    let scoreBefore = score
-//    if let visitedScore = vistited[pos] {
-//      score += visitedScore
-//      return
-//    }
-
-    let height = map[pos.y][pos.x]
-    if height == 9 {
-      vistited[pos] = 1
-      score += 1
+  func hike(pos: Position, summits: inout Set<Position>) {
+    if isSummit(pos) {
+      summits.insert(pos)
       return
     }
 
     for dir in directions {
       let newPos = Position(x: pos.x + dir[0], y: pos.y + dir[1])
-      guard isInBounds(newPos), map[newPos.y][newPos.x] == height + 1 else {
+      guard isInBounds(newPos), map[newPos.y][newPos.x] == map[pos.y][pos.x] + 1 else {
         continue
       }
-      print(newPos)
-      hike(pos: newPos, score: &score, vistited: &vistited)
+      hike(pos: newPos, summits: &summits)
+    }
+  }
+  
+  func hike(pos: Position, trails: inout Int, memory: inout [Position:Int]) {
+    if isSummit(pos) {
+      trails += 1
+      return
+    }
+    
+    let trailsBefore = trails
+    if let memorized = memory[pos] {
+      trails += memorized
+      return
     }
 
-    vistited[pos] = score - scoreBefore
+    for dir in directions {
+      let newPos = Position(x: pos.x + dir[0], y: pos.y + dir[1])
+      guard isInBounds(newPos), map[newPos.y][newPos.x] == map[pos.y][pos.x] + 1 else {
+        continue
+      }
+      hike(pos: newPos, trails: &trails, memory: &memory)
+    }
+
+    memory[pos] = trails - trailsBefore
   }
 
   func part1() async -> Any {
     var res = 0
-    var visited = [Position:Int]()
 
     for y in 0..<map.count {
       for x in 0..<map[y].count {
         let value = map[y][x]
         if value == 0 {
-          var score = 0
-          hike(pos: Position(x: x, y: y), score: &score, vistited: &visited)
-          res += score
-          print(score)
+          var summits: Set<Position> = []
+          hike(pos: Position(x: x, y: y), summits: &summits)
+          res += summits.count
         }
       }
     }
@@ -70,6 +85,20 @@ struct Day10: AdventDay {
   }
   
   func part2() async -> Any {
-   return 0
+    var res = 0
+    var memory = [Position:Int]()
+
+    for y in 0..<map.count {
+      for x in 0..<map[y].count {
+        let value = map[y][x]
+        if value == 0 {
+          var trails = 0
+          hike(pos: Position(x: x, y: y), trails: &trails, memory: &memory)
+          res += trails
+        }
+      }
+    }
+
+    return res
   }
 }
