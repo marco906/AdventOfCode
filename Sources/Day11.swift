@@ -12,22 +12,24 @@ struct Day11: AdventDay {
       return 1
     }
 
-    var newStones = [Int]()
-
     if let memorized = memory[stone, default: [:]][count] {
       return memorized
     }
 
-    let str = String(stone)
+    var newStones = [Int]()
+
     if stone == 0 {
       newStones = [1]
-    } else if str.count % 2 == 0 {
-      let mid = str.index(str.startIndex, offsetBy: str.count / 2)
-      let left = String(str[..<mid])
-      let right = String(str[mid...]).trimmingPrefix(while: { $0 == "0" })
-      newStones = [Int(left) ?? 0, Int(right) ?? 0]
     } else {
-      newStones = [stone * 2024]
+      let str = String(stone)
+      if str.count % 2 == 0 {
+        let mid = str.index(str.startIndex, offsetBy: str.count / 2)
+        let left = String(str[..<mid])
+        let right = String(str[mid...])
+        newStones = [Int(left) ?? 0, Int(right) ?? 0]
+      } else {
+        newStones = [stone * 2024]
+      }
     }
 
     let res = newStones.reduce(0) { $0 + blink(stone: $1, count: count - 1, memory: &memory) }
