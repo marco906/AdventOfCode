@@ -28,7 +28,7 @@ struct Day12: AdventDay {
   func value(_ position: Position) -> String {
     return map[position.y][position.x]
   }
-  
+
   func fence(_ type: String, pos: Position, area: inout Int, perimeter: inout Int, visited: inout [String:Set<Position>]) async {
     if visited[type, default: []].contains(pos) {
       return
@@ -55,6 +55,42 @@ struct Day12: AdventDay {
     }
   }
 
+  func fence(_ type: String, pos: Position, area: inout Int, edges: inout Int, visited: inout [String:Set<Position>]) async {
+    if visited[type, default: []].contains(pos) {
+      if edges != 0 {
+        newEdges -= 2
+        edges -= 2
+      }
+      return
+    }
+
+    guard isInBounds(pos) else {
+      visited[type, default: []].insert(pos)
+      return
+    }
+
+    var newEdges = 4
+
+    let plant = value(pos)
+    if plant == type {
+      area += 1
+      if edges != 0 {
+        newEdges -= 2
+        edges -= 2
+      }
+      visited[type, default: []].insert(pos)
+    } else {
+      return
+    }
+
+    edges += newEdges
+
+    for dir in directions {
+      let newPos = Position(x: pos.x + dir[0], y: pos.y + dir[1])
+      await fence(type, pos: newPos, area: &area, edges: &edges, visited: &visited)
+    }
+  }
+
   func part1() async -> Any {
     var cost = 0
     var visited = [String:Set<Position>]()
@@ -73,6 +109,19 @@ struct Day12: AdventDay {
   }
   
   func part2() async -> Any {
-    return 0
+    var cost = 0
+    var visited = [String:Set<Position>]()
+
+    for y in 0..<map.count {
+      for x in 0..<map[y].count {
+        let type = map[y][x]
+        var area = 0
+        var edges = 0
+        await fence(type, pos: Position(x: x, y: y), area: &area, edges: &edges, visited: &visited)
+        cost += area * edges
+      }
+    }
+
+    return cost
   }
 }
