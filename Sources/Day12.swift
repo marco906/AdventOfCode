@@ -57,10 +57,6 @@ struct Day12: AdventDay {
 
   func fence(_ type: String, pos: Position, area: inout Int, edges: inout Int, visited: inout [String:Set<Position>]) async {
     if visited[type, default: []].contains(pos) {
-      if edges != 0 {
-        newEdges -= 2
-        edges -= 2
-      }
       return
     }
 
