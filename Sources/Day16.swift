@@ -32,52 +32,51 @@ struct Day16: AdventDay {
     return (Position(x: 0, y: 0), Position(x: 0, y: 0))
   }
   
-  func isObstacle(_ position: Position, map: [[String]]) -> Bool? {
-    guard position.x >= 0 && position.y >= 0 else { return nil }
-    guard position.x < numCols && position.y < numRows else { return nil }
+  func isObstacle(_ position: Position) -> Bool {
+    guard position.x >= 0 && position.y >= 0 else { return true }
+    guard position.x < numCols && position.y < numRows else { return true }
     return map[position.y][position.x] == "#"
   }
   
-  func move(current: Position, heading: Position, visited: inout [Position : Set<Position>], map: [[String]]) async -> Bool {
-    if let obstacle = isObstacle(heading, map: map) {
-      
-      let dx = heading.x - current.x
-      let dy = heading.y - current.y
-      
-      if obstacle {
-        // stay and rotate 90 degrees
-        let newHeadingX = current.x - dy
-        let newHeadingY = current.y + dx
-        let newHeading = Position(x: newHeadingX, y: newHeadingY)
-        
-        // check if stuck
-        if visited[current, default: []].contains(newHeading) {
-          return false
-        }
-        
-        visited[current, default: []].insert(newHeading)
-        
-        return await move(current: current, heading: newHeading, visited: &visited, map: map)
-        
-      } else {
-        // move ahead
-        let newHeadingX = heading.x + dx
-        let newHeadingY = heading.y + dy
-        let newHeading = Position(x: newHeadingX, y: newHeadingY)
-        
-        // check if stuck
-        if visited[current, default: []].contains(newHeading) {
-          return false
-        }
-        
-        visited[heading, default: []].insert(newHeading)
-        
-        return await move(current: heading, heading: newHeading, visited: &visited, map: map)
-      }
-      
-    } else {
-      return true
+  func isTarget(_ position: Position) -> Bool {
+    return map[position.y][position.x] == "E"
+  }
+  
+  func move(current: Position, heading: Position, score: Int, visited: inout Set<Position>) async -> Int? {
+    if isTarget(current) {
+      print("found target \(current), score \(score)")
+      // visited.removeAll()
+      return score
     }
+    
+    // visited.insert(current)
+    
+    //print("visiting \(current), heading \(heading)")
+    
+    
+    let dx = heading.x - current.x
+    let dy = heading.y - current.y
+    
+    let front = Position(x: heading.x + dx, y: heading.y + dy)
+    let right = Position(x: current.x - dy, y: current.y + dx)
+    let left = Position(x: current.x + dy, y: current.y - dx)
+    
+    var scores: [Int?] = []
+    
+    if !isObstacle(heading) && !visited.contains(heading) {
+      scores.append(await move(current: heading, heading: front, score: score + 1, visited: &visited))
+    }
+    
+    if !isObstacle(right) && !visited.contains(right) {
+      scores.append(await move(current: current, heading: right, score: score + 1000, visited: &visited))
+    }
+    
+    if !isObstacle(left) && !visited.contains(left) {
+      scores.append(await move(current: current, heading: left, score: score + 1000, visited: &visited))
+    }
+
+    //print(scores)
+    return scores.compactMap { $0 }.min()
   }
   
   func part1() async -> Any {
@@ -85,39 +84,16 @@ struct Day16: AdventDay {
     let startPosition = start.0
     let startHeading = start.1
     
-    var visited = [Position : Set<Position>]()
-    visited[startPosition, default: []].insert(startHeading)
+    var visited = Set<Position>()
+    print(startPosition, startHeading)
     
-    let _ = await move(current: startPosition, heading: startHeading, visited: &visited, map: map)
+    let score = await move(current: startPosition, heading: startHeading, score: 0, visited: &visited)
     
-    return visited.count
+    return score ?? 0
   }
   
   func part2() async -> Any {
-    let start = getStartPositionAndHeading()
-    let startPosition = start.0
-    let startHeading = start.1
-    
-    var visited = [Position : Set<Position>]()
-    visited[startPosition, default: []].insert(startHeading)
-    
-    let _ = await move(current: startPosition, heading: startHeading, visited: &visited, map: map)
-    
     var res = 0
-    
-    visited.removeValue(forKey: startPosition)
-    
-    for visitedPos in visited.keys {
-      var visited = [Position : Set<Position>]()
-      visited[startPosition, default: []].insert(startHeading)
-      
-      var modMap = map
-      modMap[visitedPos.y][visitedPos.x] = "#"
-      let escaped = await move(current: startPosition, heading: startHeading, visited: &visited, map: modMap)
-      if !escaped {
-        res += 1
-      }
-    }
     
     return res
   }
