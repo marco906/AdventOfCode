@@ -43,17 +43,16 @@ struct Day16: AdventDay {
   }
   
   func move(current: Position, heading: Position, score: Int, visited: inout Set<Position>) async -> Int? {
+    visited.insert(current)
+
+    if isObstacle(current) {
+      return nil
+    }
     if isTarget(current) {
-      print("found target \(current), score \(score)")
-      // visited.removeAll()
+      //print("found target \(current), score \(score)")
       return score
     }
-    
-    // visited.insert(current)
-    
-    //print("visiting \(current), heading \(heading)")
-    
-    
+
     let dx = heading.x - current.x
     let dy = heading.y - current.y
     
@@ -62,20 +61,20 @@ struct Day16: AdventDay {
     let left = Position(x: current.x + dy, y: current.y - dx)
     
     var scores: [Int?] = []
-    
-    if !isObstacle(heading) && !visited.contains(heading) {
+    var visited = visited
+
+    if !visited.contains(heading) {
       scores.append(await move(current: heading, heading: front, score: score + 1, visited: &visited))
     }
     
-    if !isObstacle(right) && !visited.contains(right) {
+    if !visited.contains(right) {
       scores.append(await move(current: current, heading: right, score: score + 1000, visited: &visited))
     }
     
-    if !isObstacle(left) && !visited.contains(left) {
+    if !visited.contains(left) {
       scores.append(await move(current: current, heading: left, score: score + 1000, visited: &visited))
     }
 
-    //print(scores)
     return scores.compactMap { $0 }.min()
   }
   
