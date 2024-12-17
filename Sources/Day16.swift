@@ -42,14 +42,16 @@ struct Day16: AdventDay {
     return map[position.y][position.x] == "E"
   }
   
-  func move(current: Position, heading: Position, score: Int, visited: inout Set<Position>) async -> Int? {
-    visited.insert(current)
-
+  func move(current: Position, heading: Position, score: Int, visited: inout [Position:Int], optimium: inout Int) async -> Int? {
+    visited[current] = -1
+    
     if isObstacle(current) {
       return nil
     }
+    
     if isTarget(current) {
       //print("found target \(current), score \(score)")
+      optimium = min(optimium, score)
       return score
     }
 
@@ -61,18 +63,65 @@ struct Day16: AdventDay {
     let left = Position(x: current.x + dy, y: current.y - dx)
     
     var scores: [Int?] = []
-    var visited = visited
+    // var visited = visited
+    
+    func moveFront() async {
+      if let frontScore = await move(current: heading, heading: front, score: score + 1, visited: &visited, optimium: &optimium) {
+        scores.append(frontScore)
+        visited[heading] = frontScore - score
+      }
+    }
+    
+    func moveRight() async {
+      if let rightScore = await move(current: current, heading: right, score: score + 1000, visited: &visited, optimium: &optimium) {
+        scores.append(rightScore)
+        visited[right] = rightScore - score
+      }
+    }
+    
+    func moveLeft() async {
+      if let leftScore = await move(current: current, heading: left, score: score + 1000, visited: &visited, optimium: &optimium) {
+        scores.append(leftScore)
+        visited[left] = leftScore - score
+      }
+    }
+    
 
-    if !visited.contains(heading) {
-      scores.append(await move(current: heading, heading: front, score: score + 1, visited: &visited))
+    if let visitedFront = visited[heading] {
+      if visitedFront >= 0 {
+        if visitedFront + score >= optimium {
+          print("ignoring \(visitedFront), score \(score), optimium \(optimium)")
+          scores.append(score + visitedFront)
+        } else {
+          await moveFront()
+        }
+      }
+    } else {
+      await moveFront()
     }
     
-    if !visited.contains(right) {
-      scores.append(await move(current: current, heading: right, score: score + 1000, visited: &visited))
+    if let visitedRight = visited[right] {
+      if visitedRight >= 0 {
+        if visitedRight + score >= optimium {
+          scores.append(score + visitedRight)
+        } else {
+          await moveRight()
+        }
+      }
+    } else {
+      await moveRight()
     }
     
-    if !visited.contains(left) {
-      scores.append(await move(current: current, heading: left, score: score + 1000, visited: &visited))
+    if let visitedLeft = visited[left] {
+      if visitedLeft >= 0 {
+        if visitedLeft + score >= optimium {
+          scores.append(score + visitedLeft)
+        } else {
+          await moveLeft()
+        }
+      }
+    } else {
+      await moveLeft()
     }
 
     return scores.compactMap { $0 }.min()
@@ -83,10 +132,11 @@ struct Day16: AdventDay {
     let startPosition = start.0
     let startHeading = start.1
     
-    var visited = Set<Position>()
+    var visited = [Position:Int]()
     print(startPosition, startHeading)
+    var optimum = Int.max
     
-    let score = await move(current: startPosition, heading: startHeading, score: 0, visited: &visited)
+    let score = await move(current: startPosition, heading: startHeading, score: 0, visited: &visited, optimium: &optimum)
     
     return score ?? 0
   }
