@@ -10,140 +10,236 @@ struct Day16: AdventDay {
   var map: [[String]] = []
   var numRows: Int
   var numCols: Int
+  var directions: [[Int]] = [[0,1], [0, -1], [1, 0], [-1,0]]
   
-  struct Position: Hashable {
+  final class Node: Hashable {
     let x: Int
     let y: Int
+    var g: Int = 0
+    var h: Int = 0
+    var f: Int { g + h }
+    
+    var parent: Node?
+    var parents: Set<Node> = []
+    var neighbors: [Node] = []
+    
+    static func == (lhs: Node, rhs: Node) -> Bool {
+      return lhs.x == rhs.x && lhs.y == rhs.y
+    }
+    
+    func hash(into hasher: inout Hasher) {
+      hasher.combine(x)
+      hasher.combine(y)
+    }
+    
+    init(x: Int, y: Int, parent: Node? = nil, parents: Set<Node> = []) {
+      self.x = x
+      self.y = y
+      self.parent = parent
+      self.parents = parents
+    }
   }
   
-  func getStartPositionAndHeading() -> (Position, Position) {
-    for y in 0..<map.count {
-      for x in 0..<map[y].count {
+  func getStartAndEnd() -> (Node, Node) {
+    var start: Node?
+    var end: Node?
+    for y in 0..<numRows {
+      for x in 0..<numCols {
         let value = map[y][x]
-        switch value {
-        case "S":
-          return (Position(x: x, y: y), Position(x: x + 1, y: y))
-        default:
-          break
+        if value == "S" {
+          start = Node(x: x, y: y)
+        } else if value == "E" {
+          end = Node(x: x, y: y)
         }
       }
     }
     
-    return (Position(x: 0, y: 0), Position(x: 0, y: 0))
+    return (start!, end!)
   }
   
-  func isObstacle(_ position: Position) -> Bool {
-    guard position.x >= 0 && position.y >= 0 else { return true }
-    guard position.x < numCols && position.y < numRows else { return true }
-    return map[position.y][position.x] == "#"
+  func getNeighbors(_ node: Node) -> [Node] {
+    var neighbors: [Node] = []
+    for direction in directions {
+      let neighbor = Node(x: node.x + direction[0], y: node.y + direction[1])
+      if !isObstacle(neighbor) {
+        neighbors.append(neighbor)
+      }
+    }
+    
+    return neighbors
   }
   
-  func isTarget(_ position: Position) -> Bool {
-    return map[position.y][position.x] == "E"
+  func isObstacle(_ node: Node) -> Bool {
+    guard node.x >= 0 && node.y >= 0 else { return true }
+    guard node.x < numCols && node.y < numRows else { return true }
+    return map[node.y][node.x] == "#"
   }
   
-  func move(current: Position, heading: Position, score: Int, visited: inout [Position:Int], optimium: inout Int) async -> Int? {
-    visited[current] = -1
-    
-    if isObstacle(current) {
-      return nil
+  func costToMove(from: Node, to: Node) -> Int {
+    let parent = from.parent ?? Node(x: from.x - 1, y: from.y)
+    let dir: [Int] = [from.x - parent.x, from.y - parent.y]
+    // same dir
+    if dir[0] == to.x - from.x && dir[1] == to.y - from.y {
+      return 1
     }
-    
-    if isTarget(current) {
-      //print("found target \(current), score \(score)")
-      optimium = min(optimium, score)
-      return score
-    }
-
-    let dx = heading.x - current.x
-    let dy = heading.y - current.y
-    
-    let front = Position(x: heading.x + dx, y: heading.y + dy)
-    let right = Position(x: current.x - dy, y: current.y + dx)
-    let left = Position(x: current.x + dy, y: current.y - dx)
-    
-    var scores: [Int?] = []
-    // var visited = visited
-    
-    func moveFront() async {
-      if let frontScore = await move(current: heading, heading: front, score: score + 1, visited: &visited, optimium: &optimium) {
-        scores.append(frontScore)
-        visited[heading] = frontScore - score
-      }
-    }
-    
-    func moveRight() async {
-      if let rightScore = await move(current: current, heading: right, score: score + 1000, visited: &visited, optimium: &optimium) {
-        scores.append(rightScore)
-        visited[right] = rightScore - score
-      }
-    }
-    
-    func moveLeft() async {
-      if let leftScore = await move(current: current, heading: left, score: score + 1000, visited: &visited, optimium: &optimium) {
-        scores.append(leftScore)
-        visited[left] = leftScore - score
-      }
-    }
-    
-
-    if let visitedFront = visited[heading] {
-      if visitedFront >= 0 {
-        if visitedFront + score >= optimium {
-          print("ignoring \(visitedFront), score \(score), optimium \(optimium)")
-          scores.append(score + visitedFront)
-        } else {
-          await moveFront()
-        }
-      }
-    } else {
-      await moveFront()
-    }
-    
-    if let visitedRight = visited[right] {
-      if visitedRight >= 0 {
-        if visitedRight + score >= optimium {
-          scores.append(score + visitedRight)
-        } else {
-          await moveRight()
-        }
-      }
-    } else {
-      await moveRight()
-    }
-    
-    if let visitedLeft = visited[left] {
-      if visitedLeft >= 0 {
-        if visitedLeft + score >= optimium {
-          scores.append(score + visitedLeft)
-        } else {
-          await moveLeft()
-        }
-      }
-    } else {
-      await moveLeft()
-    }
-
-    return scores.compactMap { $0 }.min()
+    return 1001
   }
+  
+  func aStar(start: Node, target: Node) -> [Node]? {
+    var open = [Node]()
+    var closed: Set<Node> = []
+    open.append(start)
+    
+    while !open.isEmpty {
+      open.sort { $0.f < $1.f }
+      let currentNode = open.removeFirst()
+      
+      if currentNode == target {
+        return backTrack(currentNode)
+      }
+      
+      closed.insert(currentNode)
+      
+      currentNode.neighbors = getNeighbors(currentNode)
+      
+      for neighbor in currentNode.neighbors {
+        if closed.contains(neighbor) {
+          continue
+        }
+        
+        let newCost = currentNode.g + costToMove(from: currentNode, to: neighbor)
+        if !open.contains(where: { $0 == neighbor }) {
+          open.append(neighbor)
+        } else if newCost >= neighbor.g {
+          continue
+        }
+        
+        neighbor.g = newCost
+        neighbor.h = heuristic(node: neighbor, target: target)
+        neighbor.parent = currentNode
+      }
+    }
+    
+    return nil
+  }
+  
+  func aStarAll(start: Node, target: Node) -> [[Node]] {
+      var open: [Node] = [start]
+      var closed: Set<Node> = []
+      
+      while !open.isEmpty {
+          // Sort open set based on f (priority queue would be better)
+          open.sort { $0.f < $1.f }
+          let currentNode = open.removeFirst()
+          
+          // If target is reached, continue processing to explore all paths
+          if currentNode == target {
+            print("Target reached")
+              continue
+          }
+          
+          closed.insert(currentNode)
+          
+          // Fetch neighbors
+          currentNode.neighbors = getNeighbors(currentNode)
+          
+          for neighbor in currentNode.neighbors {
+              if closed.contains(neighbor) {
+                  continue
+              }
+              
+              let newCost = currentNode.g + costToMove(from: currentNode, to: neighbor)
+              
+              // Add neighbor to open if it's not already there
+              if !open.contains(neighbor) {
+                  open.append(neighbor)
+              }
+              
+              // If this path to the neighbor is better
+              if newCost < neighbor.g {
+                  neighbor.g = newCost
+                  neighbor.h = heuristic(node: neighbor, target: target)
+                  neighbor.parents = [currentNode] // Overwrite parents
+              } else if newCost == neighbor.g {
+                  // If this path to the neighbor is equally good
+                  neighbor.parents.insert(currentNode) // Add an additional parent
+              }
+          }
+      }
+      
+      // Return all paths by backtracking from the target
+      return backTrackAll(target)
+  }
+
+  // Backtrack to find all paths
+  func backTrackAll(_ node: Node) -> [[Node]] {
+      var paths: [[Node]] = []
+      
+      func dfs(current: Node, path: [Node]) {
+          if current.parents.isEmpty {
+              paths.append([current] + path)
+              return
+          }
+          
+          for parent in current.parents {
+              dfs(current: parent, path: [current] + path)
+          }
+      }
+      
+      dfs(current: node, path: [])
+      return paths
+  }
+  
+  func heuristic(node: Node, target: Node) -> Int {
+    let dx = abs(node.x - target.x)
+    let dy = abs(node.y - target.y)
+    return dx + dy
+  }
+  
+  func backTrack(_ node: Node) -> [Node] {
+    var path: [Node] = []
+    var currentNode: Node? = node
+    while let n = currentNode {
+      path.append(n)
+      currentNode = n.parent
+    }
+    return path.reversed()
+  }
+  
+//  func backTrackAll(_ node: Node) -> [[Node]] {
+//    var paths: [[Node]] = []
+//    
+//    func dfs(current: Node, path: [Node]) {
+//      if current.parents.isEmpty {
+//        paths.append([current] + path.reversed())
+//        return
+//      }
+//      
+//      for parent in current.parents {
+//        dfs(current: parent, path: path + [current])
+//      }
+//    }
+//    
+//    dfs(current: node, path: [])
+//    return paths
+//  }
   
   func part1() async -> Any {
-    let start = getStartPositionAndHeading()
-    let startPosition = start.0
-    let startHeading = start.1
+    let (start, end) = getStartAndEnd()
+    let path = aStar(start: start, target: end)
+    let cost = path?.last?.g ?? 0
     
-    var visited = [Position:Int]()
-    print(startPosition, startHeading)
-    var optimum = Int.max
-    
-    let score = await move(current: startPosition, heading: startHeading, score: 0, visited: &visited, optimium: &optimum)
-    
-    return score ?? 0
+    return cost
   }
   
   func part2() async -> Any {
-    var res = 0
+    let (start, end) = getStartAndEnd()
+    let paths = aStarAll(start: start, target: end)
     
-    return res
+    print(paths)
+    
+    print(paths.flatMap { $0 }.count)
+    
+    return Set(paths.flatMap { $0 }).count
   }
 }
